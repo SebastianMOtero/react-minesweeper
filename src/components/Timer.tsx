@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export const Timer = () => {
+export const Timer = (): [() => void,() => void,number] => {
     const [isActive, setIsActive] = useState(false);
     const [time, setTime] = useState(0);
 
@@ -9,9 +9,10 @@ export const Timer = () => {
 
         if(isActive) {
             interval = setInterval(() => {
-                setTime(time => time + 10);
-            }, 10);
+                setTime(time => time + 1);
+            }, 1000);
         }
+    console.log(time)
     }, [isActive])
 
     const handleStart = () => {

@@ -1,7 +1,11 @@
 import React from 'react';
 
-export const Display = () => (
+interface Props {
+    time: number;
+}
+
+export const Display = ({ time }: Props) => (
     <>
-    {'display'}
+    {`Time: ${Math.floor(time/100)}`}
     </>
 )

@@ -7,7 +7,7 @@ export enum Difficulty {
 };
 
 export enum StateCell {
-    Hidden, Marked, Visible, Detonated, HiddenMine
+    Hidden, Marked, Question, Visible, Detonated, VisibleMine
 };
 
 export interface ICell {
@@ -20,9 +20,9 @@ export const createBoard = (difficulty: Difficulty) => {
     console.debug('createBoard');
     const matrix: ICell[][] = [];
 
-    for (let rows = 0; rows < BOARD_WIDTH[difficulty]; rows++) {
+    for (let rows = 0; rows < BOARD_HEIGHT[difficulty]; rows++) {
         const row: ICell[] = [];
-        for (let col = 0; col < BOARD_HEIGHT[difficulty]; col++) {
+        for (let col = 0; col < BOARD_WIDTH[difficulty]; col++) {
             row.push({
                 stateCell: StateCell.Hidden,
                 hasAMine: false,
@@ -40,13 +40,13 @@ export const createBoard = (difficulty: Difficulty) => {
 const plantMines = (difficulty: Difficulty, matrix: ICell[][]) => {
     console.debug('plantMines');
     let remainingMines = MINES[difficulty];
-    const total = BOARD_WIDTH[difficulty] * BOARD_WIDTH[difficulty];
+    const total = BOARD_HEIGHT[difficulty] * BOARD_WIDTH[difficulty];
 
     do {
         const randPlace: number = Math.floor(Math.random() * total);
         const col: number = randPlace % BOARD_WIDTH[difficulty];
         const row: number = Math.floor(randPlace / BOARD_WIDTH[difficulty]);
-
+    
         // We check if the cell has already a mine
         if (!matrix[row][col].hasAMine) {
             matrix[row][col].hasAMine = true;

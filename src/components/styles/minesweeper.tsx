@@ -4,9 +4,14 @@ export const StyledMinesweeper = styled.div`
     height: 100vh;
     background-color: grey
 
-    display: grid;
-    grid-template-rows: 1fr 1fr;
-    grid-template-columns: 1 fr 1 fr;
-    grid-gap: 0px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start
     border: 2px solid #000;
-`
+    justify-content: flex-start;
+
+    `
+    // aside {
+    //     width: 100%
+    //     display: block;
+    // }

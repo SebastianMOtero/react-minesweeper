@@ -7,13 +7,19 @@ import { useBoard } from '../hooks/useBoard';
 
 interface Props {
     cell: ICell;
-    location: {
+    gameOver: boolean;
+    mines: number;
+    setGameOver: React.Dispatch<React.SetStateAction<boolean>>;
+    setMines: React.Dispatch<React.SetStateAction<number>>;
+    callback: (cell: ICell, position: {row: number, col: number}) => void;
+    position: {
         row: number,
-        col: number
+        col: number;
     }
 }
 
-const Cell = ({ cell, location }: Props) => {
+const Cell = ({ cell, gameOver, setGameOver, setMines, mines, callback, position }: Props) => {
+    // console.log('renderCell')
     const [board, setBoard] = useBoard();
 
     const updateBoard = () => {
@@ -23,30 +29,52 @@ const Cell = ({ cell, location }: Props) => {
 
     const leftClick = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (cell.stateCell !== StateCell.Hidden) {
+        if (gameOver || cell.stateCell !== StateCell.Hidden) {
             return;
         }
 
         if (cell.stateCell === StateCell.Hidden) {
             if (cell.hasAMine) {
                 cell.stateCell = StateCell.Detonated;
-                updateBoard();
-                // TODO gameover
+                setGameOver(true);
             } else {
                 cell.stateCell = StateCell.Visible;
-                updateBoard();
+                if (cell.minesAround === 0) {
+                    callback(cell, position);
+                }
             }
+            updateBoard();
         }
     }
 
     const rightClick = (e: React.MouseEvent) => {
         e.preventDefault();
 
-        if (cell.stateCell !== StateCell.Hidden && cell.stateCell !== StateCell.Marked) {
+        if (gameOver || cell.stateCell !== StateCell.Hidden && cell.stateCell !== StateCell.Marked && cell.stateCell !== StateCell.Question) {
             return;
         }
 
-        cell.stateCell = cell.stateCell === StateCell.Hidden ? StateCell.Marked : StateCell.Hidden;
+        if (cell.stateCell === StateCell.Hidden) {
+            // the cell will be flagged so we check if theres remaining mines
+            if (mines === 0) {
+                return;
+            }
+            
+            // we decrement remaining mines
+            setMines(prev => prev - 1);
+        } 
+
+        if (cell.stateCell === StateCell.Marked) {
+            // we increment remaining mines
+            setMines(prev => prev + 1);
+        }
+
+        // Hidden => Marked => Question => Hidden
+        cell.stateCell = cell.stateCell === StateCell.Hidden 
+            ? StateCell.Marked 
+            : cell.stateCell === StateCell.Question 
+            ? StateCell.Hidden
+            : StateCell.Question
         updateBoard();
     }
 
