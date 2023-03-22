@@ -21,13 +21,19 @@ const calcVW = (width: number) => {
     }
 }
 export const StyledBoard = styled.div`
-    color: red;
-    display: grid;
-    grid-template-rows: repeat(${(props: Props) => props.height}, calc(${props => calcVW(props.width)}vw / ${props => props.width}));
-    grid-template-columns: repeat(${(props: Props) => props.width}, 1fr);
+display: grid;
+grid-template-rows: repeat(${(props: Props) => props.height}, calc(${props => calcVW(props.width)}vw / ${props => props.width}));
+grid-template-columns: repeat(${(props: Props) => props.width}, 1fr);
     grid-gap: 0px;
-    border: 2px solid #000;
+    // border: 2px solid #000;
     max-width: ${props => calcVW(props.width)}vw;
+    min-width: 25%;
+    // margin-left: 60px;
+    padding: 60px;
+    
+    @media screen and (max-width: 768px) {
+        grid-column: 1/-1;
+    }
+    `
+    // color: red;
     // width: 100%;
-    margin-left: 60px;
-`

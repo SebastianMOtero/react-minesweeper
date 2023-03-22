@@ -1,90 +1,88 @@
-import React, { useState, createContext, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Display } from './Display';
 import { StartButton } from './StartButton';
 import { Board } from './Board';
-import { Timer } from './Timer';
-import { DifficultyModal } from './DifficultyModal';
 
+import { DifficultyModal } from './DifficultyModal';
 import { StyledMinesweeper } from './styles/minesweeper';
 
-import {ICell, StateCell } from '../utils/gameHelpers'
+import { ICell, StateCell, MINES, Difficulty } from '../utils/gameHelpers'
 
 import { useBoard } from '../hooks/useBoard';
 
-const GameOverContext = createContext(12);
+export enum GameStates {
+    IDLE,
+    SELECT_DIFFICULTY,
+    START_GAME,
+    PLAYING,
+    GAME_OVER,
+    WIN
+}
 
 const Minesweeper = () => {
-    console.log('render Minesweeper');
-
     const [board, setBoard, newBoard] = useBoard();
-    const [gameOver, setGameOver] = useState(true);
-    const [startGame, setStartGame] = useState(false);
-    const [mines, setMines] = useState(10);
-    const [handleReset, handleStart, time] = Timer();
-    const [selectDifficulty, setSelectDifficulty] = useState(false);
-    const [difficulty, setDifficulty] = useState(0);
-
-    // console.log(time);
-
-    const handleStartGame = () => {
-        setGameOver(false);
-        setStartGame(true);
-        // setSelectDifficulty(true);
-        newBoard(difficulty);
-        // handleStart()
-        // if (typeof handleStart !== 'number') handleStart()
-    }
+    const [difficulty, setDifficulty] = useState(Difficulty.Easy);
+    const [mines, setMines] = useState(MINES[difficulty]);
+    const [gameState, setGameState] = useState(GameStates.IDLE);
 
     useEffect(() => {
-        console.log('difficulty use effect')
-        setGameOver(false);
-        setStartGame(true);
-        // setSelectDifficulty(true);
-        newBoard(difficulty);
-    }, [difficulty])
+        // Initialize game values
+        if (gameState === GameStates.START_GAME) {
+            setMines(MINES[difficulty])
+            setGameState(GameStates.PLAYING);
+            newBoard(difficulty);
+        }
 
-    useEffect(() => {
-        console.log('useEffect')
-        if (gameOver && startGame) {
+        // Make mines visible
+        if (gameState === GameStates.GAME_OVER) {
             const newBoard: ICell[][] = JSON.parse(JSON.stringify(board));
             for (let row = 0; row < newBoard.length; row++) {
                 for (let col = 0; col < newBoard[0].length; col++) {
                     const cell = newBoard[row][col];
-                    if(cell.hasAMine && cell.stateCell !== StateCell.Detonated) {
+                    if (cell.hasAMine && cell.stateCell !== StateCell.Detonated) {
                         cell.stateCell = StateCell.VisibleMine
                     }
                 }
-                
             }
             setBoard(prev => newBoard)
-            setStartGame(false);
         }
-
-    }, [gameOver])
+    }, [gameState])
 
     return (
         <>
-            <header> Minesweeper </header>
-        <StyledMinesweeper>
-            {/* <GameOverContext.Provider value={12}> */}
-            <Board board={board} gameOver={gameOver} setGameOver={setGameOver} setMines={setMines} mines={mines}/>
-            <aside>
-                <h1>{gameOver ? 'game over' : 'playing'}</h1>
-                <Display time={time}/>
-                <h2>Remaining mines: {mines}</h2>
-                {/* <StartButton startGame={handleStartGame} /> */}
+            <StyledMinesweeper >
+                <header> Minesweeper </header>
+                <Board board={board} difficulty={difficulty} setMines={setMines} mines={mines}
+                    totalMines={MINES[difficulty]} setBoard={setBoard} setGameState={setGameState} gameState={gameState} />
+                <aside>
+                    {
+                        <div className='gameResult'>
 
-                <StartButton setSelectDifficulty={setSelectDifficulty}/>
-
-                {selectDifficulty ? <DifficultyModal setSelectDifficulty={setSelectDifficulty} setDifficulty={setDifficulty}/>: ''}
-            </aside>
-            {/* </GameOverContext.Provider> */}
-        </StyledMinesweeper>
-                </>
-
+                            <h1>{gameState === GameStates.GAME_OVER
+                                ? 'GAME OVER'
+                                : gameState === GameStates.WIN
+                                    ? 'GAME FINISHED'
+                                    : ''}</h1>
+                        </div>
+                    }
+                    {gameState === GameStates.GAME_OVER || gameState === GameStates.WIN
+                        || gameState === GameStates.PLAYING
+                        ?
+                        (
+                            <div>
+                                <h2>Mines: {mines}</h2>
+                                <Display gameState={gameState} />
+                            </div>
+                        )
+                        : ''
+                    }
+                    <StartButton setGameState={setGameState} />
+                    {gameState === GameStates.SELECT_DIFFICULTY ? <DifficultyModal setGameState={setGameState} setDifficulty={setDifficulty} /> : ''}
+                </aside>
+            </StyledMinesweeper>
+        </>
     )
-
 }
 
 export default Minesweeper;

@@ -1,6 +1,11 @@
 export const BOARD_WIDTH = [8, 16, 30];
 export const BOARD_HEIGHT = [8, 16, 16];
-export const MINES = [10, 40, 99];
+export const MINES = [1, 40, 99]; // TODO 10
+
+export interface Position {
+    row: number;
+    col: number;
+}
 
 export enum Difficulty {
     Easy, Intermediate, Expert
@@ -14,6 +19,7 @@ export interface ICell {
     stateCell: StateCell;
     hasAMine: boolean;
     minesAround: number;
+    position: Position;
 }
 
 export const createBoard = (difficulty: Difficulty) => {
@@ -26,7 +32,10 @@ export const createBoard = (difficulty: Difficulty) => {
             row.push({
                 stateCell: StateCell.Hidden,
                 hasAMine: false,
-                minesAround: 0
+                minesAround: 0,
+                position: {
+                    row: rows, col
+                }
             });
         }
         matrix.push(row)

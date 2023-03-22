@@ -1,80 +1,198 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyledBoard } from './styles/board';
 import Cell from './Cell';
-import { StateCell, ICell } from '../utils/gameHelpers';
+import { StateCell, ICell, Position, Difficulty } from '../utils/gameHelpers';
 
-import { useBoard } from '../hooks/useBoard';
+import { GameStates } from './Minesweeper';
 
 interface Props {
     board: ICell[][];
-    gameOver: boolean;
     mines: number;
-    setGameOver: React.Dispatch<React.SetStateAction<boolean>>;
     setMines: React.Dispatch<React.SetStateAction<number>>
+    totalMines: number;
+    difficulty: Difficulty;
+    setBoard: React.Dispatch<React.SetStateAction<ICell[][]>>
+    setGameState: React.Dispatch<React.SetStateAction<GameStates>>;
+    gameState: GameStates;
 }
 
-export const Board = ({ board, gameOver, setGameOver, setMines, mines }: Props) => {
-    console.debug('render board')
+export const Board = ({ gameState, setGameState, board, setBoard, setMines, mines, totalMines }: Props) => {
+    const [cellsRevealed, setCellsRevealed] = useState(0);
+    const [changeCellState, setChangeCellState] = useState(false);
 
-    const [_, setBoard] = useBoard();
+    useEffect(() => {
+        if (changeCellState === true) {
+            setChangeCellState(false);
+        }
+    }, [changeCellState])
 
-    const emptyCellFound = (cell: ICell, position: {row: number, col: number}) => {
-        console.log('emptyCellFound');
-        console.log(cell)
-        console.log(board)
-        console.log(position);
+    const getSurroundingCells = (cell: ICell): ICell[] => {
+        const { row, col } = cell.position;
+        const cellsArray = [];
 
-        const newBoard: ICell[][] = JSON.parse(JSON.stringify(board));
-
-        const { row, col } = position;
         if (col > 0) {
             // left
-            newBoard[row][col-1].stateCell = StateCell.Visible;
+            cellsArray.push(board[row][col - 1])
 
             if (row > 0) {
                 // top left
-                newBoard[row-1][col-1].stateCell = StateCell.Visible;
+                cellsArray.push(board[row - 1][col - 1])
             }
-            
-            if (row < board.length-1) {
+
+            if (row < board.length - 1) {
                 // bottom left
-                newBoard[row+1][col-1].stateCell = StateCell.Visible;
+                cellsArray.push(board[row + 1][col - 1])
             }
         }
 
         if (row > 0) {
             // top
-            newBoard[row-1][col].stateCell = StateCell.Visible;
+            cellsArray.push(board[row - 1][col])
         }
 
-        if (row < board.length-1) {
+        if (row < board.length - 1) {
             // bottom
-            newBoard[row+1][col].stateCell = StateCell.Visible;
+            cellsArray.push(board[row + 1][col])
         }
 
-        if (col < board[0].length-1) {
+        if (col < board[0].length - 1) {
             // right
-            newBoard[row][col+1].stateCell = StateCell.Visible;
+            cellsArray.push(board[row][col + 1])
 
             if (row > 0) {
                 // top right
-                newBoard[row-1][col+1].stateCell = StateCell.Visible;
+                cellsArray.push(board[row - 1][col + 1])
             }
-            
-            if (row < board.length-1) {
+
+            if (row < board.length - 1) {
                 // bottom right
-                newBoard[row+1][col+1].stateCell = StateCell.Visible;
+                cellsArray.push(board[row + 1][col + 1])
             }
         }
-        console.log(newBoard)
-        setBoard(prev => newBoard)
+
+        return cellsArray;
+    }
+
+    const emptyCellFound = (cell: ICell) => {
+        const surroundingCells = getSurroundingCells(cell);
+        let cellChangedToVisible = 0;
+
+        while (surroundingCells.length) {
+            const surroundingCell: ICell | undefined = surroundingCells.shift();
+
+            if (typeof surroundingCell !== 'undefined') {
+                if (surroundingCell.stateCell === StateCell.Visible) {
+                    continue;
+                }
+
+                surroundingCell.stateCell = StateCell.Visible;
+                cellChangedToVisible++;
+
+                if (surroundingCell?.minesAround === 0) {
+                    surroundingCells.push(...getSurroundingCells(surroundingCell));
+                }
+            }
+        }
+
+        setCellsRevealed(prev => prev + cellChangedToVisible);
+    }
+
+    useEffect(() => {
+        if (gameState === GameStates.PLAYING) {
+            const totalCells = board.length * board[0].length;
+            if (totalCells - totalMines - cellsRevealed === 0) {
+                // flagged the remaining hidden mines
+                const newBoard: ICell[][] = JSON.parse(JSON.stringify(board));
+                for (let i = 0; i < newBoard.length; i++) {
+                    for (let j = 0; j < newBoard[0].length; j++) {
+                        if (newBoard[i][j].hasAMine && newBoard[i][j].stateCell !== StateCell.Marked) {
+                            newBoard[i][j].stateCell = StateCell.Marked;
+                        }
+                    }
+                }
+
+                setGameState(GameStates.WIN);
+                setBoard(prev => newBoard)
+                setCellsRevealed(0);
+                setMines(0);
+            }
+        }
+    }, [cellsRevealed])
+
+
+    const handleLeftClick = (e: React.MouseEvent, position: Position) => {
+        e.preventDefault();
+        const { row, col } = position;
+        const cell = board[row][col];
+
+        if (gameState !== GameStates.PLAYING || cell.stateCell !== StateCell.Hidden) {
+            return;
+        }
+
+        if (cell.stateCell === StateCell.Hidden) {
+            if (cell.hasAMine) {
+                cell.stateCell = StateCell.Detonated;
+                setCellsRevealed(0);
+                setGameState(GameStates.GAME_OVER);
+            } else {
+                cell.stateCell = StateCell.Visible;
+                setCellsRevealed(prev => prev + 1);
+                // If we found an empty cell, then
+                if (cell.minesAround === 0) {
+                    emptyCellFound(cell)
+                }
+            }
+        }
+    }
+
+    const handleRightClick = (e: React.MouseEvent, position: Position) => {
+        e.preventDefault();
+        const { row, col } = position;
+        const cell = board[row][col];
+
+        if (gameState !== GameStates.PLAYING || cell.stateCell !== StateCell.Hidden && cell.stateCell !== StateCell.Marked && cell.stateCell !== StateCell.Question) {
+            return;
+        }
+
+        if (cell.stateCell === StateCell.Hidden) {
+            // the cell will be flagged so we check if theres remaining mines
+            if (mines === 0) {
+                return;
+            }
+
+            // we decrement remaining mines
+            setMines(prev => prev - 1);
+        }
+
+        if (cell.stateCell === StateCell.Marked) {
+            // we increment remaining mines
+            setMines(prev => prev + 1);
+        }
+
+        if (cell.stateCell === StateCell.Question) {
+            // we use the hook to re-render the board
+            setChangeCellState(true);
+        }
+
+        // Hidden => Marked => Question => Hidden
+        cell.stateCell = cell.stateCell === StateCell.Hidden
+            ? StateCell.Marked
+            : cell.stateCell === StateCell.Question
+                ? StateCell.Hidden
+                : StateCell.Question
+            ;
     }
 
     return (
         <>
             <StyledBoard width={board[0].length} height={board.length}>
                 {board.map((row: ICell[], j: number) => row.map((cell: ICell, i: number) =>
-                    <Cell key={i} cell={cell} gameOver={gameOver} setGameOver={setGameOver} setMines={setMines} mines={mines} callback={emptyCellFound} position={{row: j, col: i}} />
+                    <Cell
+                        key={i}
+                        onClick={(e: React.MouseEvent) => handleLeftClick(e, { row: j, col: i })}
+                        onContextMenu={(e: React.MouseEvent) => handleRightClick(e, { row: j, col: i })}
+                        cell={cell}
+                    />
                 ))}
             </StyledBoard>
         </>
